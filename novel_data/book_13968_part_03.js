@@ -1,0 +1,2 @@
+globalThis.NOVEL_PAYLOADS=globalThis.NOVEL_PAYLOADS||{};
+globalThis.NOVEL_PAYLOADS["book_13968_part_03"]="H4sIAAAAAAAC/+Pier5mzZNdPc9XL1AA4hddTc/3THvav93KzNzMwtLMQoELAOJu1fgiAAAA";
