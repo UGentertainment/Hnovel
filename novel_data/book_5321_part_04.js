@@ -1,0 +1,2 @@
+globalThis.NOVEL_PAYLOADS=globalThis.NOVEL_PAYLOADS||{};
+globalThis.NOVEL_PAYLOADS["book_5321_part_04"]="H4sIAAAAAAAC/wGlAFr/CgrnrKzlm5vnq6DlrqTlhoXkvKDmnaXlkJ/lk6blo7DvvIhibGjvvInmhY7lhaU85ZCI56ef5oOF57yY77yIbnDvvIko5Lmd5LqVKe+9nFBPMTjoh4nntIXlv4Pot7MKcee+pO+8mjg3ODcwOTMyMu+8mmh0dHBzOi8vd3d3LnBvMTgudHcvYm9va3MvNzA3MDc3L2FydGljbGVzLzgxOTA2MDQKlErKw6UAAAA=";
