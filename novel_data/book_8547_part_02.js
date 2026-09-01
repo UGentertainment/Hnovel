@@ -1,0 +1,2 @@
+globalThis.NOVEL_PAYLOADS=globalThis.NOVEL_PAYLOADS||{};
+globalThis.NOVEL_PAYLOADS["book_8547_part_02"]="H4sIAAAAAAAC/wGCAH3/CgoKCuesrOWNgeS4ieeroO+8iOiCie+8iTzkuINYKOWHiem5pCnvvZxQTzE46IeJ57SF5b+D6LezCgrmnaXmupDnvZHlnYDvvJpodHRwczovL3d3dy5wbzE4LnR3L2Jvb2tzLzYyNjk1NS9hcnRpY2xlcy83NjQ3OTQ1CgpqdXNlCi6TTH6CAAAA";
