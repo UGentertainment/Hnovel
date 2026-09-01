@@ -1,0 +1,2 @@
+globalThis.NOVEL_PAYLOADS=globalThis.NOVEL_PAYLOADS||{};
+globalThis.NOVEL_PAYLOADS["book_4167_part_03"]="H4sIAAAAAAAC/wGLAHT/CgoKCuesrDfnq6Ag5piv5Ye25YWGIDzmgbbkurrkvKAo6Im+546bKe+9nFBPMTjoh4nntIXlv4Pot7MKcee+pDU2ODQ0OTg2M+abtOWkmnBv5paH77yaIGh0dHBzOi8vd3d3LnBvMTgudHcvYm9va3MvNzE3MDM2L2FydGljbGVzLzgzNjgxOTMgCkHH//GLAAAA";
