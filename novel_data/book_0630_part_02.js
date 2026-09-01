@@ -1,0 +1,2 @@
+globalThis.NOVEL_PAYLOADS=globalThis.NOVEL_PAYLOADS||{};
+globalThis.NOVEL_PAYLOADS["book_0630_part_02"]="H4sIAAAAAAAC/+N6vmbN09mzn/Y2PtnR8Hz1Ai4AfFKZaREAAAA=";
