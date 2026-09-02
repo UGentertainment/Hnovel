@@ -969,7 +969,6 @@ body:not(.day).bg-blue{--reader-surface:#161d23;--reader-text:#d6dfe5;--reader-m
         <div class="tool-group" x-show="$store.game.mode==='reading'">
           <div class="tool-label">阅读辅助</div>
           <div class="tool-row">
-            <button class="mini" @click="$store.game.setPrecacheTarget($store.game.precacheTarget ? 0 : 3)" x-text="$store.game.precacheTarget ? '预缓存：开' : '预缓存：关'"></button>
             <button class="mini" :class="{'btn-pri':$store.game.autoImageAfterText}" @click="$store.game.toggleAutoImageAfterText()" x-text="$store.game.autoImageAfterText ? '自动生图：开' : '自动生图：关'"></button>
           </div>
         </div>
@@ -13063,11 +13062,6 @@ document.addEventListener('alpine:init',()=>{
     readerDayBg:'paper',
     readerTouchX:0,
     chapterSwitching:false,
-    precacheTarget:3,
-    precacheEnabled:true,
-    precacheRunning:false,
-    precacheStatus:'目标 3 章',
-    precacheSeenCounts:{},
     completionQueue:Promise.resolve(),
     lastCompletionAt:0,
     minCompletionGapMs:1800,
@@ -14858,15 +14852,12 @@ ${oldText}`;
     },
 
     isGeneratingNow(){
-      return !!(this.waitingForStream || this.precacheRunning || (this.disabled && this.mode === 'reading'));
+      return !!(this.waitingForStream || (this.disabled && this.mode === 'reading'));
     },
 
     composerStatusText(){
       if(this.waitingForStream){
         return this.waitingHint ? '正在生成中，通信时间较长，仍在等待回应…' : '正在生成中，请稍候…';
-      }
-      if(this.precacheRunning){
-        return `后台正在预缓存章节… ${this.precacheStatusText()}`;
       }
       if(this.disabled && this.mode === 'reading'){
         return '正在处理中，请稍候…';
@@ -14885,11 +14876,12 @@ ${oldText}`;
 
     composerPlaceholder(){
       if(this.mode === 'source') return '阅读原著时无需输入；先选中一句，再从那里入书。';
-      if(this.activeBook()?.crossingMode === 'story') return '输入续写要求，例如剧情走向、人物安排或文风；输入“继续”可自然续写。';
-      return '你现在身在书中。输入行动或对白，回车发送。';
+      if(this.activeBook()?.crossingMode === 'story') return '输入续写要求；留空直接发送等同于输入“继续”。';
+      return '输入行动或对白；留空直接发送等同于输入“继续”。';
     },
 
     sendButtonText(){
+      if(!String(this.input || '').trim()) return '继续';
       return this.activeBook()?.crossingMode === 'story' ? '续写' : '行动';
     },
 
@@ -15014,10 +15006,7 @@ ${oldText}`;
     readerPrevPage(){this.scrollReaderToPage(this.readerPage - 1);},
     readerNextPage(){
       const total = Math.max(1,this.readerPages().length);
-      if(this.readerPage >= total - 1){
-        if(this.mode === 'reading') this.continueFromLastPage();
-        return;
-      }
+      if(this.readerPage >= total - 1) return;
       this.scrollReaderToPage(this.readerPage + 1);
     },
     handleViewportChange(){
@@ -15043,10 +15032,6 @@ ${oldText}`;
         return;
       }
       b.lastCrossingReaderPage = pageIndex;
-      const count = this.storyCount(b);
-      const estimatedSeen = Math.max(0,Math.min(count,Math.ceil(((this.readerPage + 1) / totalPages) * count)));
-      this.precacheSeenCounts[b.id] = Math.max(this.precacheSeenCounts[b.id] || 0,estimatedSeen);
-      if(this.precacheTarget > 0) this.ensurePrecache();
     },
 
     savedReaderPage(book=this.activeBook()){
@@ -15067,24 +15052,6 @@ ${oldText}`;
         this.scrollReaderToPage(page,smooth);
         this.noteReaderProgress();
       });
-    },
-
-    async continueFromLastPage(){
-      if(this.precacheRunning || this.disabled || this.mode !== 'reading') return;
-      const b = this.activeBook();
-      if(!b) return;
-      const before = Math.max(1,this.readerPages().length);
-      this.precacheStatus = '正在继续生成…';
-      this.disabled = true;
-      try{
-        const out = await this.generateContinueScene(true);
-        if(out){
-          this.readerPage = before - 1;
-          requestAnimationFrame(()=>this.scrollReaderToPage(before));
-        }
-      }finally{
-        this.disabled = false;
-      }
     },
 
     scrollChatBottom(){
@@ -16120,7 +16087,8 @@ ${transcript || '本次切入后没有产生有效正文或行动。'}`;
 
     async sendMessage(){
       if(this.disabled) return;
-      const text = String(this.input || '').trim() || '继续';
+      const typedText = String(this.input || '').trim();
+      const text = typedText || '继续';
       this.input = '';
       this.disabled = true;
 
@@ -16239,11 +16207,10 @@ ${text}
       }
     },
 
-    async generateBookScene({directive,prompt,emptyText,errorText,background=false,playerInput='',onRequestQueued=null}){
+    async generateBookScene({directive,prompt,emptyText,errorText,playerInput='',onRequestQueued=null}){
       const b = this.activeBook();
       if(!b) return '';
       b.history = this.normalizeHistory(b.history);
-      if(background) this.precacheStatus = '后台预缓存中…';
       const cleanPlayerInput = String(playerInput || '').trim();
       const userMsg = this.makeMessage('user',directive,{
         hidden:true,
@@ -16267,9 +16234,6 @@ ${text}
           const out = await new Promise(resolve=>{
             let longWaitTimer = setTimeout(()=>{
               this.waitingHint = true;
-              if(background){
-                this.precacheStatus = '通信时间较长，继续等待中…';
-              }
             },12000);
             if(onRequestQueued){
               const notify = onRequestQueued;
@@ -16336,23 +16300,6 @@ ${text}
       }
     },
 
-    precacheStatusText(){
-      if(this.precacheTarget <= 0) return '0章 · 已关闭';
-      const b = this.activeBook();
-      if(!b) return `${this.precacheTarget}章 · 未进入阅读`;
-      const buffered = this.storyCount(b) - (this.precacheSeenCounts[b.id] || 0);
-      const text = `目标${this.precacheTarget}章 · 后方约 ${Math.max(0,buffered)} 章`;
-      return this.precacheRunning ? `缓存中 · ${text}` : text;
-    },
-
-    setPrecacheTarget(n){
-      this.precacheTarget = Math.max(0,Math.min(10,Number(n) || 0));
-      this.precacheEnabled = this.precacheTarget > 0;
-      this.precacheStatus = this.precacheEnabled ? `目标 ${this.precacheTarget} 章` : '已关闭';
-      this.autoSave();
-      if(this.precacheTarget > 0) this.ensurePrecache();
-    },
-
     toggleAutoImageAfterText(){
       this.autoImageAfterText = !this.autoImageAfterText;
       this.autoSave();
@@ -16371,43 +16318,6 @@ ${text}
       const targetId = String(targetSegmentId || this.latestStorySegment()?.id || '').trim();
       if(!targetId) return;
       await this.generateImage(targetId,{force:true,silentAuto:true});
-    },
-
-    async generateContinueScene(background=false){
-      return await this.generateBookScene({
-        directive:'继续',
-        prompt:`【继续阅读指令】
-玩家没有输入新的剧情控制。请视为玩家输入了“继续”，顺着前文自然续写下一章。
-
-要求：
-- 必须承接前文人物状态、关系进度、冲突和伏笔。
-- 不写系统说明，不写选项，不写标题。
-- 正文不少于350字。`,
-        emptyText:'书页短暂空白，剧情没有成功显现。',
-        errorText:'继续生成失败，剧情暂未继续。',
-        background
-      });
-    },
-
-    async ensurePrecache(){
-      if(this.precacheTarget <= 0 || this.precacheRunning || this.mode !== 'reading') return;
-      const b = this.activeBook();
-      if(!b) return;
-      this.precacheRunning = true;
-      try{
-        while(this.precacheTarget > 0 && this.mode === 'reading' && this.activeBookId === b.id){
-          const seen = this.precacheSeenCounts[b.id] || 0;
-          const buffered = this.storyCount(b) - seen;
-          if(buffered >= this.precacheTarget) break;
-          const index = this.storyCount(b) + 1;
-          this.precacheStatus = `正在预缓存第 ${index} 章`;
-          const out = await this.generateContinueScene(true);
-          if(!out) break;
-        }
-        this.precacheStatus = '已缓存到目标范围';
-      }finally{
-        this.precacheRunning = false;
-      }
     },
 
     clampBatchCount(){
@@ -17611,9 +17521,7 @@ ${scene}`;
         imageSoundEnabled:this.imageSoundEnabled,
         readerFontSize:this.readerFontSize,
         readerTypography:this.readerTypography,
-        readerDayBg:this.readerDayBg,
-        precacheTarget:this.precacheTarget,
-        precacheSeenCounts:this.precacheSeenCounts
+        readerDayBg:this.readerDayBg
       };
     },
 
@@ -17763,12 +17671,7 @@ ${scene}`;
         this.readerFontSize = Math.max(15,Math.min(24,Number(s.readerFontSize) || 18));
         this.readerTypography = ['compact','comfortable','loose'].includes(s.readerTypography) ? s.readerTypography : 'comfortable';
         this.readerDayBg = s.readerDayBg || 'paper';
-        this.precacheTarget = Math.max(0,Math.min(10,Number(s.precacheTarget ?? 3) || 3));
-        this.precacheEnabled = this.precacheTarget > 0;
-        this.precacheSeenCounts = s.precacheSeenCounts && typeof s.precacheSeenCounts === 'object' ? s.precacheSeenCounts : {};
-        this.precacheRunning = false;
         this.compressionRunning = false;
-        this.precacheStatus = this.precacheEnabled ? `目标 ${this.precacheTarget} 章` : '未开启';
         this.applyReaderTypography();
         this.input = '';
         this.templeTailId = null;
