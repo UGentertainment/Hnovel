@@ -1,5 +1,7 @@
 *
 !.gitattributes
 !.gitignore
+!index.html
+!pako_inflate.min.js
 !novel_data/
 !novel_data/*.js
